@@ -189,3 +189,85 @@ As the number of users and notifications grows:
 -- Partition notification tables.
 -- Use Redis caching for frequently accessed data.
 
+# Stage 3
+## Existing Query
+```sql
+SELECT * FROM notifications WHERE studentID = 1042
+AND isRead = false ORDER BY createdAt DESC;
+```
+## 1. Is this query accurate?
+Yes.
+The query correctly retrieves all unread notifications for the student with ID **1042** and sorts them by the latest notification first using `createdAt DESC`.
+---
+## 2. Why is this query slow?
+As the system grows to around **50,000 students** and **5,000,000 notifications**, this query becomes slow because:
+-- It may perform a full table scan if indexes are missing.
+-- Sorting millions of records using `ORDER BY createdAt DESC` is expensive.
+-- Filtering by `studentID` and `isRead` without indexes increases execution time.
+-- Fetching all columns using `SELECT *` transfers unnecessary data.
+## 3. What would you change?
+Instead of selecting every column, retrieve only the required fields.
+```sql
+SELECT notificationID,
+       title,
+       message,
+       notificationType,
+       createdAt FROM notifications WHERE studentID = 1042
+AND isRead = false ORDER BY createdAt DESC;
+```
+Also create a composite index:
+```sql
+CREATE INDEX idx_student_read_created
+ON notifications(studentID, isRead, createdAt);
+```
+Use pagination for better performance.
+Example:
+```sql
+SELECT notificationID,
+       title,
+       message,
+       notificationType,
+       createdAt FROM notifications WHERE studentID = 1042
+AND isRead = false ORDER BY createdAt DESC LIMIT 20 OFFSET 0;
+```
+## 4. Likely Computational Cost
+### Without Index
+-- Search : **O(n)**
+-- Sorting : **O(n log n)**
+Overall performance becomes slow for millions of records.
+### With Proper Composite Index
+-- Search : **O(log n)**
+-- Sorting becomes much faster because indexed records are already ordered.
+
+## 5. Should we create indexes on every column?
+**No.**
+Creating indexes on every column is not recommended because:
+-- Extra disk space is required.
+-- INSERT operations become slower.
+-- UPDATE operations become slower.
+-- DELETE operations become slower.
+-- Database maintenance becomes expensive.
+-- Many indexes may never be used.
+Indexes should only be created on columns that are frequently used in:
+-- WHERE clauses
+-- JOIN conditions
+-- ORDER BY clauses
+-- GROUP BY clauses
+## 6. SQL Query
+Find all students who received a **Placement** notification during the last **7 days**.
+```sql
+SELECT DISTINCT studentID FROM notifications
+WHERE notificationType = 'Placement' AND createdAt >= NOW() - INTERVAL '7 days';
+```
+## Recommended Index
+```sql
+CREATE INDEX idx_notification_type_created
+ON notifications(notificationType, createdAt);
+```
+## Summary
+-- The query is correct but inefficient for large datasets.
+-- Avoid using `SELECT *`.
+-- Create a composite index on `(studentID, isRead, createdAt)`.
+-- Use pagination for large result sets.
+-- Do not create indexes on every column.
+
