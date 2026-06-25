@@ -103,3 +103,89 @@ Response
    }
 ]
 ```
+
+# Stage 2
+## Persistent Storage Selection
+### Recommended Database
+I recommend **PostgreSQL** as the persistent storage because:
+-- Supports ACID transactions for data consistency.
+-- Suitable for structured notification data.
+-- Fast querying using indexes.
+-- Supports pagination efficiently.
+-- Easy to scale with indexing and partitioning.
+## Database Schema
+### Table: Users
+
+ Column      Type               
+ 
+ user_id     UUID (Primary Key) 
+ name        VARCHAR(100)       
+ email       VARCHAR(100)       
+ created_at  TIMESTAMP          
+
+---
+
+### Table: Notifications
+ Column           Type               
+  
+ notification_id  UUID (Primary Key) 
+ title            VARCHAR(255)       
+ message          TEXT               
+ priority         VARCHAR(20)        
+ status           VARCHAR(20)        
+ created_at       TIMESTAMP          
+### Table: User_Notifications
+
+ Column           Type               
+
+ id               UUID (Primary Key) 
+ user_id          UUID (Foreign Key) 
+ notification_id  UUID (Foreign Key) 
+ is_read          BOOLEAN            
+ read_at          TIMESTAMP          
+## Sample SQL Queries
+### Insert Notification
+```sql
+INSERT INTO Notifications(title, message, priority, status)
+VALUES
+('Placement Drive',
+'Amazon Online Assessment Tomorrow',
+'HIGH',
+'ACTIVE');
+```
+### Get All Notifications
+```sql
+SELECT * FROM Notifications;
+```
+### Get Notifications of a User
+```sql
+SELECT *
+FROM User_Notifications
+WHERE user_id='USER001';
+```
+### Mark Notification as Read
+```sql
+UPDATE User_Notifications
+SET is_read=true,
+read_at=NOW()
+WHERE notification_id='NOT1001'
+AND user_id='USER001';
+```
+### Delete Notification
+```sql
+DELETE FROM Notifications
+WHERE notification_id='NOT1001';
+```
+## Problems with Increasing Data Volume
+As the number of users and notifications grows:
+-- Database queries become slower.
+-- Pagination performance decreases.
+-- Read operations increase significantly.
+-- Storage requirements become larger.
+## Solutions
+-- Create indexes on frequently searched columns.
+-- Use pagination for API responses.
+-- Archive old notifications.
+-- Partition notification tables.
+-- Use Redis caching for frequently accessed data.
+
