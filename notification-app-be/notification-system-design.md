@@ -358,3 +358,28 @@ while(queue not empty)
     if failed
         retry(job)
 ```
+
+# Stage 6
+## Approach
+The Notification API returns all unread notifications.
+Each notification is assigned a priority score based on:
+Placement = 3
+Result = 2
+Event = 1
+If two notifications have the same priority, the latest notification is given preference using the timestamp.
+The notifications are sorted in descending order using:
+1. Priority Score
+2. Timestamp
+Finally, the top N notifications (default Top 10) are displayed.
+## Time Complexity
+Fetching notifications : O(n)
+Sorting : O(n log n)
+Selecting Top N : O(n)
+Overall Complexity : O(n log n)
+## Handling New Notifications
+Whenever a new notification arrives:
+-- Calculate its priority score.
+-- Insert it into a Priority Queue (Max Heap).
+-- Remove the lowest priority notification if heap size exceeds N.
+This keeps only the top N notifications in memory.
+
