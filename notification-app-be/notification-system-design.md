@@ -315,3 +315,46 @@ Benefits:
 Tradeoff:
 -- Slower INSERT and UPDATE operations.
 
+# Stage 5
+## Problems in the Existing Implementation
+The current implementation sends email, saves data to the database and pushes notifications one student at a time.
+Problems include:
+-- Slow execution for 50,000 students.
+-- If email sending fails midway, processing stops.
+-- Database and email operations are tightly coupled.
+-- No retry mechanism.
+-- Difficult to scale.
+## Improved Design
+Use an asynchronous architecture with a Message Queue (RabbitMQ/Kafka).
+Flow:
+1. HR clicks "Notify All".
+2. API stores the notification once.
+3. Student IDs are added to a message queue.
+4. Worker services process the queue in parallel.
+5. Each worker:
+   -- Saves notification.
+   -- Sends email.
+   -- Sends in-app notification.
+6. Failed jobs are retried automatically.
+## Should Database Save and Email Send Together?
+**No**
+These operations should be independent.
+Reason:
+-- Email service may fail while database save succeeds.
+-- Users should still receive in-app notifications even if email fails.
+-- Failed emails can be retried later.
+## Revised Pseudocode
+```
+function notifyAll(studentIds, message)
+    saveNotification(message)
+    for each studentId
+        enqueue(studentId, message)
+**Worker Process**
+while(queue not empty)
+    job = dequeue()
+    saveNotificationForStudent(job)
+    sendEmail(job)
+    sendPushNotification(job)
+    if failed
+        retry(job)
+```
