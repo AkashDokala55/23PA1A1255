@@ -264,10 +264,54 @@ WHERE notificationType = 'Placement' AND createdAt >= NOW() - INTERVAL '7 days';
 CREATE INDEX idx_notification_type_created
 ON notifications(notificationType, createdAt);
 ```
-## Summary
--- The query is correct but inefficient for large datasets.
--- Avoid using `SELECT *`.
--- Create a composite index on `(studentID, isRead, createdAt)`.
--- Use pagination for large result sets.
--- Do not create indexes on every column.
+
+# Stage 4
+## Problem Statement
+Currently, notifications are fetched from the database every time a student opens a page. As the number of users increases, the database receives a large number of repeated read requests, causing high latency and poor user experience.
+
+## Proposed Solution
+To improve performance, I would use the following strategies:
+### 1. Redis Caching
+Store recently accessed notifications and unread notification counts in Redis.
+Benefits:
+-- Reduces database load.
+-- Faster response time.
+-- Improves user experience.
+Tradeoff:
+-- Extra memory cost.
+-- Cache invalidation must be handled correctly.
+### 2. Pagination
+Instead of returning all notifications, fetch only a limited number.
+Example:
+```sql
+SELECT *
+FROM notifications
+WHERE studentID = 1042
+ORDER BY createdAt DESC
+LIMIT 20 OFFSET 0;
+```
+Benefits:
+-- Smaller response size.
+-- Faster database queries.
+Tradeoff:
+ Multiple requests are required for large datasets.
+### 3. Lazy Loading
+Initially load only the latest notifications.
+Older notifications are fetched only when the user scrolls.
+Benefits:
+-- Faster page loading.
+-- Less network traffic.
+Tradeoff:
+-- Requires additional API calls.
+### 4. Database Indexing
+Create indexes on frequently queried columns.
+```sql
+CREATE INDEX idx_student_created
+ON notifications(studentID, createdAt);
+```
+Benefits:
+-- Faster search.
+-- Faster sorting.
+Tradeoff:
+-- Slower INSERT and UPDATE operations.
 
